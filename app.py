@@ -17,7 +17,7 @@ else:
 # 🖥️ 画面のデザイン設定
 st.set_page_config(page_title="刃研ぎAI達人診断", page_icon="🪓", layout="centered")
 
-# 🔥【超重要】CSSを使って、それぞれのカメラ画面（cam_v1 / cam_v2）の上に固有のリアルタイムラインを重ねる
+# 🔥 CSSを使って、それぞれのカメラ画面（cam_v1 / cam_v2）の上に固有のリアルタイムラインを重ねる
 st.markdown("""
 <style>
 /* --- 共通設定: カメラ入力の親要素を相対配置にして重なり順を制御 --- */
@@ -26,11 +26,10 @@ div[data-testid="stCameraInput"] {
 }
 
 /* --- ① タブ1（正面・cam_v1）用の赤い水平線 --- */
-/* key="cam_v1" のカメラ入力の後ろに疑似要素で赤線を配置 */
 div:has(> div[data-testid="stCameraInput"] button[key="cam_v1"])::after {
     content: "";
     position: absolute;
-    top: 52%; /* Take Photoボタンとの兼ね合いで中央付近に微調整 */
+    top: 52%;
     left: 0;
     width: 100%;
     height: 4px;
@@ -136,5 +135,21 @@ with view_tab2:
             img_array = np.array(img)
             h, w, _ = img_array.shape
             
-            # 撮影後画像への確定線（右下がりの適正研ぎ角29度）
-            center_x, center_y = int(w * 0.5), int(h
+            # 180度反転（右下がりの適正研ぎ角29度）ラインを描画
+            center_x, center_y = int(w * 0.5), int(h * 0.7)
+            angle_rad = np.radians(29)
+            end_x1 = int(center_x + h * 0.5 * np.tan(angle_rad))
+            end_y1 = int(center_y - h * 0.5)
+            
+            cv2.line(img_array, (center_x, center_y), (end_x1, end_y1), (255, 255, 0), 4) 
+            cv2.line(img_array, (center_x, center_y), (center_x, 0), (255, 255, 0), 2)     
+            
+            st.image(img_array, caption="🟡 撮影完了！29度ガイドとのズレを最終確認しよう", use_container_width=True)
+            image_to_analyze = Image.fromarray(img_array)
+            active_mode = "刃先の真横（しのぎ面の丸み・29度角チェック）"
+            
+    with sub_tab4:
+        uploaded_file2 = st.file_uploader("刃先の画像ファイルを選んでね", type=["jpg", "jpeg", "png"], key="file_v2")
+        if uploaded_file2:
+            img = Image.open(uploaded_file2)
+            img_array = np.array(img
