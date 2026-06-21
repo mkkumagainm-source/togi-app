@@ -44,13 +44,11 @@ active_mode = ""
 with view_tab1:
     st.markdown("### 🛠️ 正面から刃先の『直線度・片研ぎ』を見よう")
     
-    # 🔴 生徒向けのわかりやすいカメラ誘導枠
-    st.markdown("#### 🟥 撮影の狙い目（ガイド）")
-    # Streamlit標準の描画機能を使って、直感的に中央を狙わせるキャンバスを配置
-    guide_canvas1 = Image.new("RGB", (400, 60), (240, 242, 246))
-    draw_g1 = ImageDraw.Draw(guide_canvas1)
-    draw_g1.line([(0, 30), (400, 30)], fill=(255, 0, 0), width=6)
-    st.image(guide_canvas1, caption="📸 下のカメラの『真ん中』にこの赤線をイメージして、刃先を水平に重ねてね！", use_container_width=True)
+    st.markdown("""
+    <div style="background-color: #f0f2f6; padding: 12px; border-radius: 8px; border-left: 5px solid #ff4b4b; margin-bottom: 10px;">
+        📸 <b>カメラ撮影のコツ:</b> カメラの画面のちょうど【真ん中】に刃先がまっすぐ重なるようにしてシャッターを押してください。撮影した写真に赤い基準線が合成されます！
+    </div>
+    """, unsafe_allow_html=True)
     
     sub_tab1, sub_tab2 = st.tabs(["📸 その場でカメラ撮影", "📂 保存したファイルを出す"])
     
@@ -60,10 +58,10 @@ with view_tab1:
             img = Image.open(camera_image1).convert("RGB")
             draw = ImageDraw.Draw(img)
             w, h = img.size
-            # 撮影後の画像中央に赤い水平線を確実に合成
+            # 🔴 撮影後の画像の中央に赤い水平線を太く確実に合成
             draw.line([(0, h // 2), (w, h // 2)], fill=(255, 0, 0), width=6)
             
-            st.image(img, caption="🔴 撮影完了！赤い基準線とのズレを確認しよう", use_container_width=True)
+            st.image(img, caption="🔴 撮影完了！赤い基準線（真ん中の線）とのズレを確認しよう", use_container_width=True)
             image_to_analyze = img
             active_mode = "刃先の正面（直線度・左右の傾きチェック）"
             
@@ -83,18 +81,11 @@ with view_tab1:
 with view_tab2:
     st.markdown("### 🛠️ 真横からしのぎ面の『丸刃・研ぎ角』を見よう")
     
-    # 🟡 生徒向けのわかりやすいカメラ誘導枠
-    st.markdown("#### 🟨 撮影の狙い目（29度ガイド）")
-    guide_canvas2 = Image.new("RGB", (400, 120), (240, 242, 246))
-    draw_g2 = ImageDraw.Draw(guide_canvas2)
-    # ミニチュアの29度線をシミュレート描画
-    g_cx, g_cy = 200, 90
-    g_angle_rad = np.radians(29)
-    g_ex = int(g_cx + 80 * np.tan(g_angle_rad))
-    g_ey = int(g_cy - 80)
-    draw_g2.line([(g_cx, g_cy), (g_ex, g_ey)], fill=(255, 215, 0), width=5) # 斜面
-    draw_g2.line([(g_cx, g_cy), (g_cx, 10)], fill=(255, 215, 0), width=2)   # 垂直背
-    st.image(guide_canvas2, caption="📸 カンナの裏（絶壁）を左の垂直に、しのぎ面を右下がりの斜線に合わせてね！", use_container_width=True)
+    st.markdown("""
+    <div style="background-color: #f0f2f6; padding: 12px; border-radius: 8px; border-left: 5px solid #ffeb3b; margin-bottom: 10px;">
+        📸 <b>カメラ撮影のコツ:</b> カンナの裏（平らな面）が左側に垂直に立ち、傾いている「しのぎ面」が右下がりになる向きで、画面の中央を狙って撮影してください。撮影後に29度ガイドが合成されます！
+    </div>
+    """, unsafe_allow_html=True)
     
     sub_tab3, sub_tab4 = st.tabs(["📸 その場でカメラ撮影", "📂 保存したファイルを出す"])
     
@@ -110,7 +101,7 @@ with view_tab2:
             end_x1 = int(center_x + h * 0.5 * np.tan(angle_rad))
             end_y1 = int(center_y - h * 0.5)
             
-            # 撮影後の画像に職人の29度線を確実に合成
+            # 🟡 撮影後の画像に職人の29度ガイドラインを確実に合成
             draw.line([(center_x, center_y), (end_x1, end_y1)], fill=(255, 255, 0), width=6)
             draw.line([(center_x, center_y), (center_x, 0)], fill=(255, 255, 0), width=3)
             
