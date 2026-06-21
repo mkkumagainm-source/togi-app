@@ -17,59 +17,60 @@ else:
 # 🖥️ 画面のデザイン設定
 st.set_page_config(page_title="刃研ぎAI達人診断", page_icon="🪓", layout="centered")
 
-# 🔥【改良版CSS】特定の構造に依存せず、カメラ入力要素（stCameraInput）の内側に直接ラインを浮かび上がらせる
+# 🔥【新設計CSS】video要素そのものを基準に、最前面（z-index: 999999）にラインを強制オーバーレイする
 st.markdown("""
 <style>
-/* --- ① タブ1（正面・cam_v1）用の赤い水平線 --- */
-div[data-testid="stCameraInput"]:has(button[key="cam_v1"]) {
-    position: relative;
+/* --- カメラのコンテナ自体を相対配置にし、はみ出しを隠す --- */
+div[data-testid="stCameraInput"] {
+    position: relative !important;
+    overflow: hidden !important;
 }
-div[data-testid="stCameraInput"]:has(button[key="cam_v1"])::after {
-    content: "";
-    position: absolute;
-    top: 45%; /* 映像エリアの中央付近に配置 */
-    left: 0;
-    width: 100%;
-    height: 4px;
-    background-color: rgba(255, 0, 0, 0.6) !important; /* 透過度60%の赤線（強制適用） */
-    z-index: 9999;
-    pointer-events: none;
+
+/* --- ① タブ1（正面・cam_v1）用の赤い水平線 --- */
+div[data-testid="stCameraInput"]:has(button[key="cam_v1"])::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 4px !important;
+    background-color: rgba(255, 0, 0, 0.7) !important; /* 透過度70%の赤線 */
+    z-index: 999999 !important; /* 最前面に強制 */
+    pointer-events: none !important;
 }
 
 /* --- ② タブ2（真横・cam_v2）用の黄色の29度くさび線（180度反転・右下がり） --- */
-div[data-testid="stCameraInput"]:has(button[key="cam_v2"]) {
-    position: relative;
-}
-/* 背（垂直線） */
-div[data-testid="stCameraInput"]:has(button[key="cam_v2"])::after {
-    content: "";
-    position: absolute;
-    top: 15%;
-    left: 50%;
-    width: 2px;
-    height: 45%;
-    background-color: rgba(255, 255, 0, 0.5) !important;
-    z-index: 9998;
-    pointer-events: none;
+/* 垂直の背 */
+div[data-testid="stCameraInput"]:has(button[key="cam_v2"])::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 15% !important;
+    left: 50% !important;
+    width: 2px !important;
+    height: 45% !important;
+    background-color: rgba(255, 255, 0, 0.6) !important;
+    z-index: 999998 !important;
+    pointer-events: none !important;
 }
 /* しのぎ面（右下がりの斜線） */
-div[data-testid="stCameraInput"]:has(button[key="cam_v2"])::before {
-    content: "";
-    position: absolute;
-    top: 35%;
-    left: 50%;
-    width: 35%;
-    height: 4px;
-    background-color: rgba(255, 255, 0, 0.7) !important;
-    z-index: 9999;
-    transform: rotate(29deg);
-    transform-origin: top left;
-    pointer-events: none;
+/* 一つの要素で2本の線を引くため、コンテナ全体の後に斜線を配置 */
+div[data-testid="stCameraInput"]:has(button[key="cam_v2"])::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 35% !important;
+    left: 50% !important;
+    width: 35% !important;
+    height: 4px !important;
+    background-color: rgba(255, 255, 0, 0.8) !important;
+    z-index: 999999 !important;
+    transform: rotate(29deg) !important;
+    transform-origin: top left !important;
+    pointer-events: none !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("📓 刃研ぎAI達人診断システム")
+st.title("🪓 刃研ぎAI達人診断システム")
 st.caption("幾何学的な『職人の基準線』と『AI達人の言葉』を見比べて、自分の研ぎ方のクセを探究しよう！")
 
 # 💡 達人プロンプト
