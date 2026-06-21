@@ -12,63 +12,64 @@ if api_key:
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-2.5-flash')
 else:
-    st.warning("APIキーが設定されていません.")
+    st.warning("APIキーが設定されていません。")
 
 # 🖥️ 画面のデザイン設定
 st.set_page_config(page_title="刃研ぎAI達人診断", page_icon="🪓", layout="centered")
 
-# 🔥 CSSを使って、それぞれのカメラ画面（cam_v1 / cam_v2）の上に固有のリアルタイムラインを重ねる
+# 🔥【改良版CSS】特定の構造に依存せず、カメラ入力要素（stCameraInput）の内側に直接ラインを浮かび上がらせる
 st.markdown("""
 <style>
-/* --- 共通設定: カメラ入力の親要素を相対配置にして重なり順を制御 --- */
-div[data-testid="stCameraInput"] {
+/* --- ① タブ1（正面・cam_v1）用の赤い水平線 --- */
+div[data-testid="stCameraInput"]:has(button[key="cam_v1"]) {
     position: relative;
 }
-
-/* --- ① タブ1（正面・cam_v1）用の赤い水平線 --- */
-div:has(> div[data-testid="stCameraInput"] button[key="cam_v1"])::after {
+div[data-testid="stCameraInput"]:has(button[key="cam_v1"])::after {
     content: "";
     position: absolute;
-    top: 52%;
+    top: 45%; /* 映像エリアの中央付近に配置 */
     left: 0;
     width: 100%;
     height: 4px;
-    background-color: rgba(255, 0, 0, 0.6); /* 透過度60%の赤線 */
-    z-index: 99;
+    background-color: rgba(255, 0, 0, 0.6) !important; /* 透過度60%の赤線（強制適用） */
+    z-index: 9999;
     pointer-events: none;
 }
 
 /* --- ② タブ2（真横・cam_v2）用の黄色の29度くさび線（180度反転・右下がり） --- */
+div[data-testid="stCameraInput"]:has(button[key="cam_v2"]) {
+    position: relative;
+}
 /* 背（垂直線） */
-div:has(> div[data-testid="stCameraInput"] button[key="cam_v2"])::after {
+div[data-testid="stCameraInput"]:has(button[key="cam_v2"])::after {
     content: "";
     position: absolute;
     top: 15%;
     left: 50%;
     width: 2px;
     height: 45%;
-    background-color: rgba(255, 255, 0, 0.5); /* 透過度50%の黄線 */
-    z-index: 98;
+    background-color: rgba(255, 255, 0, 0.5) !important;
+    z-index: 9998;
     pointer-events: none;
 }
 /* しのぎ面（右下がりの斜線） */
-div:has(> div[data-testid="stCameraInput"] button[key="cam_v2"])::before {
+div[data-testid="stCameraInput"]:has(button[key="cam_v2"])::before {
     content: "";
     position: absolute;
     top: 35%;
     left: 50%;
     width: 35%;
     height: 4px;
-    background-color: rgba(255, 255, 0, 0.7); /* 透過度70%の太い黄線 */
-    z-index: 99;
-    transform: rotate(29deg); /* 29度右下がりに傾ける */
+    background-color: rgba(255, 255, 0, 0.7) !important;
+    z-index: 9999;
+    transform: rotate(29deg);
     transform-origin: top left;
     pointer-events: none;
 }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🪓 刃研ぎAI達人診断システム")
+st.title("📓 刃研ぎAI達人診断システム")
 st.caption("幾何学的な『職人の基準線』と『AI達人の言葉』を見比べて、自分の研ぎ方のクセを探究しよう！")
 
 # 💡 達人プロンプト
@@ -135,7 +136,6 @@ with view_tab2:
             img_array = np.array(img)
             h, w, _ = img_array.shape
             
-            # 180度反転（右下がりの適正研ぎ角29度）ラインを描画
             center_x, center_y = int(w * 0.5), int(h * 0.7)
             angle_rad = np.radians(29)
             end_x1 = int(center_x + h * 0.5 * np.tan(angle_rad))
