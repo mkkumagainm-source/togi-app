@@ -12,7 +12,7 @@ if api_key:
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-2.5-flash')
 else:
-    st.warning("APIキーが設定されていません。")
+    st.warning("APIキーが設定されていません.")
 
 # 🖥️ 画面のデザイン設定
 st.set_page_config(page_title="刃研ぎAI達人診断", page_icon="🪓", layout="centered")
@@ -152,4 +152,38 @@ with view_tab2:
         uploaded_file2 = st.file_uploader("刃先の画像ファイルを選んでね", type=["jpg", "jpeg", "png"], key="file_v2")
         if uploaded_file2:
             img = Image.open(uploaded_file2)
-            img_array = np.array(img
+            img_array = np.array(img)
+            h, w, _ = img_array.shape
+            
+            center_x, center_y = int(w * 0.5), int(h * 0.7)
+            angle_rad = np.radians(29)
+            end_x1 = int(center_x + h * 0.5 * np.tan(angle_rad))
+            end_y1 = int(center_y - h * 0.5)
+            
+            cv2.line(img_array, (center_x, center_y), (end_x1, end_y1), (255, 255, 0), 4)
+            cv2.line(img_array, (center_x, center_y), (center_x, 0), (255, 255, 0), 2)
+            
+            st.image(img_array, caption="🟡 29度ガイドとのズレを確認しよう", use_container_width=True)
+            image_to_analyze = Image.fromarray(img_array)
+            active_mode = "刃先の真横（しのぎ面の丸み・29度角チェック）"
+
+# 🚀 診断ボタンの設置（共通）
+st.write("---")
+if image_to_analyze:
+    st.success(f"【{active_mode}】の画像の準備ができました！")
+    st.warning("⚠️ **生徒のみなさんへ:** 達人AIも光の反射などで時々間違えます。上の正確な基準線や、自分の目、手触りと比べて『本当かな？』と確かめてみよう！")
+    
+    if st.button("🧙‍♂️ 達人先生に診断してもらう", type="primary"):
+        with st.spinner("達人先生が刃先をじっくり見ています..."):
+            try:
+                custom_prompt = f"現在の撮影視点：{active_mode}\n\n{SYS_PROMPT}"
+                response = model.generate_content([custom_prompt, image_to_analyze])
+                
+                st.balloons()
+                st.subheader("🧙‍♂️ 達人先生からのアドバイス")
+                st.markdown(response.text)
+                
+            except Exception as e:
+                st.error(f"診断中にエラーが発生しました: {e}")
+else:
+    st.info("上のいずれかのタブから、カメラ撮影またはファイル選択で刃先の画像用意してください。")
