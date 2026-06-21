@@ -16,62 +16,6 @@ else:
 # 🖥️ 画面のデザイン設定
 st.set_page_config(page_title="刃研ぎAI達人診断", page_icon="🪓", layout="centered")
 
-# 🔥【新設計CSS】自作のクラス（.front-target / .side-target）を起点にして、カメラ枠の最前面に線を強制配置
-st.markdown("""
-<style>
-/* --- 共通: カメラ入力枠を相対配置にし、はみ出しをカット --- */
-div[data-testid="stCameraInput"] {
-    position: relative !important;
-    overflow: hidden !important;
-}
-
-/* ----------------------------------------------------
-   🔴 ① 正面カメラ（front-target）用の赤い水平線
----------------------------------------------------- */
-.front-target div[data-testid="stCameraInput"]::after {
-    content: "" !important;
-    position: absolute !important;
-    top: 50% !important; /* カメラのド真ん中 */
-    left: 0 !important;
-    width: 100% !important;
-    height: 4px !important;
-    background-color: rgba(255, 0, 0, 0.65) !important; /* 透過度65%の赤線 */
-    z-index: 999999 !important; /* ビデオ映像より手前に配置 */
-    pointer-events: none !important;
-}
-
-/* ----------------------------------------------------
-   🟡 ② 真横カメラ（side-target）用の黄色の29度ガイド線
----------------------------------------------------- */
-/* 垂直の背（カンナの裏） */
-.side-target div[data-testid="stCameraInput"]::after {
-    content: "" !important;
-    position: absolute !important;
-    top: 15% !important;
-    left: 50% !important;
-    width: 2px !important;
-    height: 45% !important;
-    background-color: rgba(255, 255, 0, 0.5) !important;
-    z-index: 999998 !important;
-    pointer-events: none !important;
-}
-/* しのぎ面（29度の斜線） */
-.side-target div[data-testid="stCameraInput"]::before {
-    content: "" !important;
-    position: absolute !important;
-    top: 35% !important;
-    left: 50% !important;
-    width: 35% !important;
-    height: 4px !important;
-    background-color: rgba(255, 255, 0, 0.75) !important;
-    z-index: 999999 !important;
-    transform: rotate(29deg) !important; /* 29度右下がりに傾ける */
-    transform-origin: top left !important;
-    pointer-events: none !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
 st.title("🪓 刃研ぎAI達人診断システム")
 st.caption("幾何学的な『職人の基準線』と『AI達人の言葉』を見比べて、自分の研ぎ方のクセを探究しよう！")
 
@@ -99,32 +43,38 @@ active_mode = ""
 # --- 👁️ 【大タブ1】刃線チェック（正面） ---
 with view_tab1:
     st.markdown("### 🛠️ 正面から刃先の『直線度・片研ぎ』を見よう")
-    st.info("📸 画面のカメラ映像に重なっている【赤い水平線】に、刃先をピタッと重ねて撮影してください！")
+    
+    # 🔴 生徒向けのわかりやすいカメラ誘導枠
+    st.markdown("#### 🟥 撮影の狙い目（ガイド）")
+    # Streamlit標準の描画機能を使って、直感的に中央を狙わせるキャンバスを配置
+    guide_canvas1 = Image.new("RGB", (400, 60), (240, 242, 246))
+    draw_g1 = ImageDraw.Draw(guide_canvas1)
+    draw_g1.line([(0, 30), (400, 30)], fill=(255, 0, 0), width=6)
+    st.image(guide_canvas1, caption="📸 下のカメラの『真ん中』にこの赤線をイメージして、刃先を水平に重ねてね！", use_container_width=True)
     
     sub_tab1, sub_tab2 = st.tabs(["📸 その場でカメラ撮影", "📂 保存したファイルを出す"])
     
     with sub_tab1:
-        # 💡 カメラ入力をカスタムクラス「front-target」で物理的に包む
-        st.markdown('<div class="front-target">', unsafe_allow_html=True)
         camera_image1 = st.camera_input("カメラに刃先を映してシャッターを押そう", key="cam_v1")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
         if camera_image1:
-            img = Image.open(camera_image1)
+            img = Image.open(camera_image1).convert("RGB")
             draw = ImageDraw.Draw(img)
             w, h = img.size
+            # 撮影後の画像中央に赤い水平線を確実に合成
             draw.line([(0, h // 2), (w, h // 2)], fill=(255, 0, 0), width=6)
-            st.image(img, caption="🔴 撮影完了！基準線とのズレを最終確認しよう", use_container_width=True)
+            
+            st.image(img, caption="🔴 撮影完了！赤い基準線とのズレを確認しよう", use_container_width=True)
             image_to_analyze = img
             active_mode = "刃先の正面（直線度・左右の傾きチェック）"
             
     with sub_tab2:
         uploaded_file1 = st.file_uploader("刃先の画像ファイルを選んでね", type=["jpg", "jpeg", "png"], key="file_v1")
         if uploaded_file1:
-            img = Image.open(uploaded_file1)
+            img = Image.open(uploaded_file1).convert("RGB")
             draw = ImageDraw.Draw(img)
             w, h = img.size
             draw.line([(0, h // 2), (w, h // 2)], fill=(255, 0, 0), width=6)
+            
             st.image(img, caption="🔴 基準線（水平）とのズレを確認しよう", use_container_width=True)
             image_to_analyze = img
             active_mode = "刃先の正面（直線度・左右の傾きチェック）"
@@ -132,18 +82,26 @@ with view_tab1:
 # --- 👁️ 【大タブ2】しのぎ面チェック（真横） ---
 with view_tab2:
     st.markdown("### 🛠️ 真横からしのぎ面の『丸刃・研ぎ角』を見よう")
-    st.info("📸 画面のカメラ映像に重なっている【黄色の29度ガイド】の傾きに、刃の『しのぎ面』を重ねて撮影してください！")
+    
+    # 🟡 生徒向けのわかりやすいカメラ誘導枠
+    st.markdown("#### 🟨 撮影の狙い目（29度ガイド）")
+    guide_canvas2 = Image.new("RGB", (400, 120), (240, 242, 246))
+    draw_g2 = ImageDraw.Draw(guide_canvas2)
+    # ミニチュアの29度線をシミュレート描画
+    g_cx, g_cy = 200, 90
+    g_angle_rad = np.radians(29)
+    g_ex = int(g_cx + 80 * np.tan(g_angle_rad))
+    g_ey = int(g_cy - 80)
+    draw_g2.line([(g_cx, g_cy), (g_ex, g_ey)], fill=(255, 215, 0), width=5) # 斜面
+    draw_g2.line([(g_cx, g_cy), (g_cx, 10)], fill=(255, 215, 0), width=2)   # 垂直背
+    st.image(guide_canvas2, caption="📸 カンナの裏（絶壁）を左の垂直に、しのぎ面を右下がりの斜線に合わせてね！", use_container_width=True)
     
     sub_tab3, sub_tab4 = st.tabs(["📸 その場でカメラ撮影", "📂 保存したファイルを出す"])
     
     with sub_tab3:
-        # 💡 カメラ入力をカスタムクラス「side-target」で物理的に包む
-        st.markdown('<div class="side-target">', unsafe_allow_html=True)
         camera_image2 = st.camera_input("カメラに刃先を映してシャッターを押そう", key="cam_v2")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
         if camera_image2:
-            img = Image.open(camera_image2)
+            img = Image.open(camera_image2).convert("RGB")
             draw = ImageDraw.Draw(img)
             w, h = img.size
             
@@ -152,6 +110,7 @@ with view_tab2:
             end_x1 = int(center_x + h * 0.5 * np.tan(angle_rad))
             end_y1 = int(center_y - h * 0.5)
             
+            # 撮影後の画像に職人の29度線を確実に合成
             draw.line([(center_x, center_y), (end_x1, end_y1)], fill=(255, 255, 0), width=6)
             draw.line([(center_x, center_y), (center_x, 0)], fill=(255, 255, 0), width=3)
             
@@ -162,7 +121,7 @@ with view_tab2:
     with sub_tab4:
         uploaded_file2 = st.file_uploader("刃先の画像ファイルを選んでね", type=["jpg", "jpeg", "png"], key="file_v2")
         if uploaded_file2:
-            img = Image.open(uploaded_file2)
+            img = Image.open(uploaded_file2).convert("RGB")
             draw = ImageDraw.Draw(img)
             w, h = img.size
             
