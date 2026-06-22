@@ -16,6 +16,80 @@ else:
 # 🖥️ 画面のデザイン設定
 st.set_page_config(page_title="刃研ぎAI達人診断", page_icon="🪓", layout="centered")
 
+# 🔥【超奥の手】JavaScriptを使って、カメラ映像(video)を見つけ次第、その直上にラインを動的挿入する
+st.components.v1.html("""
+<script>
+function injectGuideLines() {
+    // Streamlitのカメラコンポーネント内にあるvideo要素をすべて探す
+    const videos = parent.document.querySelectorAll('video');
+    
+    videos.forEach((video) => {
+        // すでにガイド線が挿入済みならスキップ
+        if (video.parentElement.querySelector('.js-guide-line')) return;
+        
+        // 親要素の配置を基準(relative)にする
+        video.parentElement.style.position = 'relative';
+        
+        // カメラの直上に重ねるオーバーレイ要素を作成
+        const overlay = parent.document.createElement('div');
+        overlay.className = 'js-guide-line';
+        overlay.style.position = 'absolute';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.pointerEvents = 'none'; // クリック（シャッター）を邪魔しない
+        overlay.style.zIndex = '9999';
+        
+        // このカメラが「タブ1（正面）」か「タブ2（真横）」かを判定
+        // Streamlitの大タブの構造を解析して線を切り替える
+        const isSideView = video.closest('.stTabs') && video.closest('[data-baseweb="tab-panel"]')?.id?.includes('tabpanel-1');
+        
+        if (!isSideView) {
+            // 🔴 正面用：中央に赤い水平線
+            const line = parent.document.createElement('div');
+            line.style.position = 'absolute';
+            line.style.top = '50%';
+            line.style.left = '0';
+            line.style.width = '100%';
+            line.style.height = '4px';
+            line.style.backgroundColor = 'rgba(255, 0, 0, 0.6)';
+            overlay.appendChild(line);
+        } else {
+            // 🟡 真横用：中央に垂直の背 ＋ 29度の斜線
+            // 垂直の背
+            const verticalLine = parent.document.createElement('div');
+            verticalLine.style.position = 'absolute';
+            verticalLine.style.top = '15%';
+            verticalLine.style.left = '50%';
+            verticalLine.style.width = '2px';
+            verticalLine.style.height = '45%';
+            verticalLine.style.backgroundColor = 'rgba(255, 255, 0, 0.6)';
+            overlay.appendChild(verticalLine);
+            
+            // 29度のしのぎ面ガイド
+            const slantLine = parent.document.createElement('div');
+            slantLine.style.position = 'absolute';
+            slantLine.style.top = '35%';
+            slantLine.style.left = '50%';
+            slantLine.style.width = '40%';
+            slantLine.style.height = '4px';
+            slantLine.style.backgroundColor = 'rgba(255, 255, 0, 0.75)';
+            slantLine.style.transformOrigin = 'top left';
+            slantLine.style.transform = 'rotate(29deg)';
+            overlay.appendChild(slantLine);
+        }
+        
+        // video要素のすぐ後ろ（手前側）にオーバーレイを挿入
+        video.parentElement.appendChild(overlay);
+    });
+}
+
+// カメラの起動にはラグがあるため、定期的に画面を監視して線を埋め込む（1秒毎）
+setInterval(injectGuideLines, 1000);
+</script>
+""", height=0)
+
 st.title("🪓 刃研ぎAI達人診断システム")
 st.caption("幾何学的な『職人の基準線』と『AI達人の言葉』を見比べて、自分の研ぎ方のクセを探究しよう！")
 
@@ -43,12 +117,7 @@ active_mode = ""
 # --- 👁️ 【大タブ1】刃線チェック（正面） ---
 with view_tab1:
     st.markdown("### 🛠️ 正面から刃先の『直線度・片研ぎ』を見よう")
-    
-    st.markdown("""
-    <div style="background-color: #f0f2f6; padding: 12px; border-radius: 8px; border-left: 5px solid #ff4b4b; margin-bottom: 10px;">
-        📸 <b>カメラ撮影のコツ:</b> カメラの画面のちょうど【真ん中】に刃先がまっすぐ重なるようにしてシャッターを押してください。撮影した写真に赤い基準線が合成されます！
-    </div>
-    """, unsafe_allow_html=True)
+    st.info("📸 画面のカメラ映像に重なっている【赤い水平線】に、刃先をピタッと重ねて撮影してください！")
     
     sub_tab1, sub_tab2 = st.tabs(["📸 その場でカメラ撮影", "📂 保存したファイルを出す"])
     
@@ -58,10 +127,8 @@ with view_tab1:
             img = Image.open(camera_image1).convert("RGB")
             draw = ImageDraw.Draw(img)
             w, h = img.size
-            # 🔴 撮影後の画像の中央に赤い水平線を太く確実に合成
             draw.line([(0, h // 2), (w, h // 2)], fill=(255, 0, 0), width=6)
-            
-            st.image(img, caption="🔴 撮影完了！赤い基準線（真ん中の線）とのズレを確認しよう", use_container_width=True)
+            st.image(img, caption="🔴 撮影完了！赤い基準線とのズレを最終確認しよう", use_container_width=True)
             image_to_analyze = img
             active_mode = "刃先の正面（直線度・左右の傾きチェック）"
             
@@ -72,7 +139,6 @@ with view_tab1:
             draw = ImageDraw.Draw(img)
             w, h = img.size
             draw.line([(0, h // 2), (w, h // 2)], fill=(255, 0, 0), width=6)
-            
             st.image(img, caption="🔴 基準線（水平）とのズレを確認しよう", use_container_width=True)
             image_to_analyze = img
             active_mode = "刃先の正面（直線度・左右の傾きチェック）"
@@ -80,12 +146,7 @@ with view_tab1:
 # --- 👁️ 【大タブ2】しのぎ面チェック（真横） ---
 with view_tab2:
     st.markdown("### 🛠️ 真横からしのぎ面の『丸刃・研ぎ角』を見よう")
-    
-    st.markdown("""
-    <div style="background-color: #f0f2f6; padding: 12px; border-radius: 8px; border-left: 5px solid #ffeb3b; margin-bottom: 10px;">
-        📸 <b>カメラ撮影のコツ:</b> カンナの裏（平らな面）が左側に垂直に立ち、傾いている「しのぎ面」が右下がりになる向きで、画面の中央を狙って撮影してください。撮影後に29度ガイドが合成されます！
-    </div>
-    """, unsafe_allow_html=True)
+    st.info("📸 画面のカメラ映像に重なっている【黄色の29度ガイド】の傾きに、刃の『しのぎ面』を重ねて撮影してください！")
     
     sub_tab3, sub_tab4 = st.tabs(["📸 その場でカメラ撮影", "📂 保存したファイルを出す"])
     
@@ -101,7 +162,6 @@ with view_tab2:
             end_x1 = int(center_x + h * 0.5 * np.tan(angle_rad))
             end_y1 = int(center_y - h * 0.5)
             
-            # 🟡 撮影後の画像に職人の29度ガイドラインを確実に合成
             draw.line([(center_x, center_y), (end_x1, end_y1)], fill=(255, 255, 0), width=6)
             draw.line([(center_x, center_y), (center_x, 0)], fill=(255, 255, 0), width=3)
             
