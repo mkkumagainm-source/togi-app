@@ -16,10 +16,10 @@ else:
 # 🖥️ 画面のデザイン設定
 st.set_page_config(page_title="刃研ぎAI達人診断", page_icon="🪓", layout="centered")
 
-# 🔥【超シンプル版JS】構造の判定をすべて捨て、すべてのカメラ映像の上に「赤・黄」を最初から全部重ねる
+# 🔥【角度修正版JS】垂直の刃裏を基準とした、正確な「29度のくさび型」をリアルタイム描画する
 st.components.v1.html("""
 <script>
-function injectAllLines() {
+function injectCorrectLines() {
     // 画面内のすべてのvideo要素（カメラ映像）を見つける
     const videos = parent.document.querySelectorAll('video');
     
@@ -39,7 +39,7 @@ function injectAllLines() {
         overlay.style.width = '100%';
         overlay.style.height = '100%';
         overlay.style.pointerEvents = 'none'; // シャッターボタンのクリックを邪魔しない
-        overlay.style.zIndex = '99999';       // 最前面に持ってくる
+        overlay.style.zIndex = '99999';       // 最前面に配置
         
         // 🔴 正面用の赤い水平線（中央）
         const redLine = parent.document.createElement('div');
@@ -48,29 +48,29 @@ function injectAllLines() {
         redLine.style.left = '0';
         redLine.style.width = '100%';
         redLine.style.height = '4px';
-        redLine.style.backgroundColor = 'rgba(255, 0, 0, 0.55)'; // 視認性の良い半透明赤
+        redLine.style.backgroundColor = 'rgba(255, 0, 0, 0.55)';
         overlay.appendChild(redLine);
         
-        // 🟡 真横用の黄色い垂直線（背の基準）
+        // 🟡 真横用の黄色い垂直線（カンナの「裏・平らな面」を合わせる基準線）
         const yellowVertical = parent.document.createElement('div');
         yellowVertical.style.position = 'absolute';
-        yellowVertical.style.top = '15%';
+        yellowVertical.style.top = '20%';
         yellowVertical.style.left = '50%';
         yellowVertical.style.width = '3px';
-        yellowVertical.style.height = '45%';
-        yellowVertical.style.backgroundColor = 'rgba(255, 255, 0, 0.5)';
+        yellowVertical.style.height = '50%';
+        yellowVertical.style.backgroundColor = 'rgba(255, 255, 0, 0.6)';
         overlay.appendChild(yellowVertical);
         
-        // 🟡 真横用の黄色い29度斜線
+        // 🟡 真横用の黄色い29度斜線（垂直線から29度開く＝水平から61度回転）
         const yellowSlant = parent.document.createElement('div');
         yellowSlant.style.position = 'absolute';
-        yellowSlant.style.top = '35%';
+        yellowSlant.style.top = '20%'; // 垂直線の頂点とスタート位置を合わせる
         yellowSlant.style.left = '50%';
-        yellowSlant.style.width = '35%';
+        yellowSlant.style.width = '45%';
         yellowSlant.style.height = '4px';
         yellowSlant.style.backgroundColor = 'rgba(255, 255, 0, 0.75)';
         yellowSlant.style.transformOrigin = 'top left';
-        yellowSlant.style.transform = 'rotate(29deg)'; // 29度傾ける
+        yellowSlant.style.transform = 'rotate(61deg)'; // 90度（真下）から29度手前に戻した角度
         overlay.appendChild(yellowSlant);
         
         // ビデオ映像のすぐ手前にこのレイヤーを挿入
@@ -78,8 +78,8 @@ function injectAllLines() {
     });
 }
 
-// 1秒ごとに巡回して、新しく立ち上がったカメラにも確実に線を引く
-setInterval(injectAllLines, 1000);
+// 1秒ごとに巡回してカメラ映像に線を重ねる
+setInterval(injectCorrectLines, 1000);
 </script>
 """, height=0)
 
@@ -150,13 +150,14 @@ with view_tab2:
             draw = ImageDraw.Draw(img)
             w, h = img.size
             
-            center_x, center_y = int(w * 0.5), int(h * 0.7)
-            angle_rad = np.radians(29)
-            end_x1 = int(center_x + h * 0.5 * np.tan(angle_rad))
-            end_y1 = int(center_y - h * 0.5)
+            # 撮影後の画像処理もJavaScriptの角度と完全に同期
+            center_x, center_y = int(w * 0.5), int(h * 0.2)
+            angle_rad = np.radians(61) # 水平から61度（垂直から29度）
+            end_x1 = int(center_x + h * 0.5 * np.cos(angle_rad))
+            end_y1 = int(center_y + h * 0.5 * np.sin(angle_rad))
             
-            draw.line([(center_x, center_y), (end_x1, end_y1)], fill=(255, 255, 0), width=6)
-            draw.line([(center_x, center_y), (center_x, 0)], fill=(255, 255, 0), width=3)
+            draw.line([(center_x, center_y), (center_x, center_y + int(h * 0.5))], fill=(255, 255, 0), width=3) # 垂直線
+            draw.line([(center_x, center_y), (end_x1, end_y1)], fill=(255, 255, 0), width=6) # 29度斜面
             
             st.image(img, caption="🟡 撮影完了！29度ガイドとのズレを最終確認しよう", use_container_width=True)
             image_to_analyze = img
@@ -169,13 +170,13 @@ with view_tab2:
             draw = ImageDraw.Draw(img)
             w, h = img.size
             
-            center_x, center_y = int(w * 0.5), int(h * 0.7)
-            angle_rad = np.radians(29)
-            end_x1 = int(center_x + h * 0.5 * np.tan(angle_rad))
-            end_y1 = int(center_y - h * 0.5)
+            center_x, center_y = int(w * 0.5), int(h * 0.2)
+            angle_rad = np.radians(61)
+            end_x1 = int(center_x + h * 0.5 * np.cos(angle_rad))
+            end_y1 = int(center_y + h * 0.5 * np.sin(angle_rad))
             
+            draw.line([(center_x, center_y), (center_x, center_y + int(h * 0.5))], fill=(255, 255, 0), width=3)
             draw.line([(center_x, center_y), (end_x1, end_y1)], fill=(255, 255, 0), width=6)
-            draw.line([(center_x, center_y), (center_x, 0)], fill=(255, 255, 0), width=3)
             
             st.image(img, caption="🟡 29度ガイドとのズレを確認しよう", use_container_width=True)
             image_to_analyze = img
