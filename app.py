@@ -16,79 +16,132 @@ else:
 # 🖥️ 画面のデザイン設定
 st.set_page_config(page_title="刃研ぎAI達人診断", page_icon="🪓", layout="centered")
 
-# 🔥【超奥の手】JavaScriptを使って、カメラ映像(video)を見つけ次第、その直上にラインを動的挿入する
-st.components.v1.html("""
+# 🔥【完全版CSS/JS】タブの切り替えを検知し、カメラ映像の真上にガイド線を動的に上書きする
+st.markdown("""
+<style>
+/* CSSで、JSが追加するガイド線レイヤーの基本スタイルを定義 */
+.js-guide-line-overlay {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: none !important; /* ボタン操作を邪魔しない */
+    z-index: 999999 !important; /* ビデオ映像より手前に配置 */
+    background: none !important;
+}
+
+/* 🔴 第1の目（正面）用の赤線スタイル */
+.guide-front-line {
+    position: absolute;
+    top: 50%; /* 映像エリアの中央 */
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background-color: rgba(255, 0, 0, 0.7); /* 透過度70%の赤線 */
+}
+
+/* 🟡 第2の目（真横）用の黄色いくさび線スタイル */
+.guide-side-vertical {
+    position: absolute;
+    top: 15%;
+    left: 50%;
+    width: 2px;
+    height: 45%;
+    background-color: rgba(255, 255, 0, 0.6);
+}
+.guide-side-slant {
+    position: absolute;
+    top: 35%;
+    left: 50%;
+    width: 35%;
+    height: 4px;
+    background-color: rgba(255, 255, 0, 0.8);
+    transform: rotate(29deg); /* 29度右下がりに傾ける */
+    transform-origin: top left;
+}
+</style>
+
 <script>
-function injectGuideLines() {
-    // Streamlitのカメラコンポーネント内にあるvideo要素をすべて探す
-    const videos = parent.document.querySelectorAll('video');
+// JavaScriptでカメラ映像を探し、タブに応じて線を引く
+function updateGuideLines() {
+    // Streamlitのタブ構造の中で、現在表示されている(activeな)タブパネル要素を探す
+    // data-baseweb="tab-panel"属性を持ち、非表示になっていない要素
+    const activeTabs = parent.document.querySelectorAll('div[data-baseweb="tab-panel"]:not([aria-hidden="true"])');
     
-    videos.forEach((video) => {
-        // すでにガイド線が挿入済みならスキップ
-        if (video.parentElement.querySelector('.js-guide-line')) return;
+    // すべてのタブパネルをスキャン
+    activeTabs.forEach((panel) => {
+        // パネル内のvideo要素を探す（カメラが起動していれば見つかる）
+        const videos = panel.querySelectorAll('video');
         
-        // 親要素の配置を基準(relative)にする
-        video.parentElement.style.position = 'relative';
-        
-        // カメラの直上に重ねるオーバーレイ要素を作成
-        const overlay = parent.document.createElement('div');
-        overlay.className = 'js-guide-line';
-        overlay.style.position = 'absolute';
-        overlay.style.top = '0';
-        overlay.style.left = '0';
-        overlay.style.width = '100%';
-        overlay.style.height = '100%';
-        overlay.style.pointerEvents = 'none'; // クリック（シャッター）を邪魔しない
-        overlay.style.zIndex = '9999';
-        
-        // このカメラが「タブ1（正面）」か「タブ2（真横）」かを判定
-        // Streamlitの大タブの構造を解析して線を切り替える
-        const isSideView = video.closest('.stTabs') && video.closest('[data-baseweb="tab-panel"]')?.id?.includes('tabpanel-1');
-        
-        if (!isSideView) {
-            // 🔴 正面用：中央に赤い水平線
-            const line = parent.document.createElement('div');
-            line.style.position = 'absolute';
-            line.style.top = '50%';
-            line.style.left = '0';
-            line.style.width = '100%';
-            line.style.height = '4px';
-            line.style.backgroundColor = 'rgba(255, 0, 0, 0.6)';
-            overlay.appendChild(line);
-        } else {
-            // 🟡 真横用：中央に垂直の背 ＋ 29度の斜線
-            // 垂直の背
-            const verticalLine = parent.document.createElement('div');
-            verticalLine.style.position = 'absolute';
-            verticalLine.style.top = '15%';
-            verticalLine.style.left = '50%';
-            verticalLine.style.width = '2px';
-            verticalLine.style.height = '45%';
-            verticalLine.style.backgroundColor = 'rgba(255, 255, 0, 0.6)';
-            overlay.appendChild(verticalLine);
-            
-            // 29度のしのぎ面ガイド
-            const slantLine = parent.document.createElement('div');
-            slantLine.style.position = 'absolute';
-            slantLine.style.top = '35%';
-            slantLine.style.left = '50%';
-            slantLine.style.width = '40%';
-            slantLine.style.height = '4px';
-            slantLine.style.backgroundColor = 'rgba(255, 255, 0, 0.75)';
-            slantLine.style.transformOrigin = 'top left';
-            slantLine.style.transform = 'rotate(29deg)';
-            overlay.appendChild(slantLine);
-        }
-        
-        // video要素のすぐ後ろ（手前側）にオーバーレイを挿入
-        video.parentElement.appendChild(overlay);
+        videos.forEach((video) => {
+            // 親要素（Streamlitが提供するコンテナ）を見つけて、z-indexなどの重なり順を調整
+            const parentElement = video.closest('div[data-testid="stCameraInput"]');
+            if (parentElement) {
+                parentElement.style.position = 'relative';
+                // video要素自体をz-index 1にして少し奥にやる（環境によって必要な場合あり）
+                // video.style.zIndex = '1';
+                
+                // すでにガイド線レイヤーが追加済みなら、CSSを更新するだけで終わり
+                let overlay = parentElement.querySelector('.js-guide-line-overlay');
+                if (!overlay) {
+                    // まだガイド線がない場合は、新規作成して追加
+                    overlay = parent.document.createElement('div');
+                    overlay.className = 'js-guide-line-overlay';
+                    
+                    // 正面用と真横用の要素を両方作っておく
+                    // 正面用（赤線）
+                    const frontLine = parent.document.createElement('div');
+                    frontLine.className = 'guide-front-line';
+                    
+                    // 真横用（黄線・垂直と斜線）
+                    const sideV = parent.document.createElement('div');
+                    sideV.className = 'guide-side-vertical';
+                    const sideS = parent.document.createElement('div');
+                    sideS.className = 'guide-side-slant';
+                    
+                    // 作成した要素をオーバーレイにぶら下げる
+                    overlay.appendChild(frontLine);
+                    overlay.appendChild(sideV);
+                    overlay.appendChild(sideS);
+                    
+                    // video要素のすぐ後ろ（手前側）にオーバーレイを挿入
+                    parentElement.appendChild(overlay);
+                }
+                
+                // --- 【超重要】ここがタブ連携の核心 ---
+                // このカメラがどのタブの中にあるかを、タブパネルの階層構造から判定
+                const isSideView = panel.getAttribute('id')?.includes('tabpanel-1');
+                
+                // ガイド線の表示/非表示をCSSで切り替える
+                const frontLineElement = overlay.querySelector('.guide-front-line');
+                const sideVerticalElement = overlay.querySelector('.guide-side-vertical');
+                const sideSlantElement = overlay.querySelector('.guide-side-slant');
+                
+                if (!isSideView) {
+                    // 第1の目（正面）なら、赤線を表示し、黄線を隠す
+                    frontLineElement.style.display = 'block';
+                    sideVerticalElement.style.display = 'none';
+                    sideSlantElement.style.display = 'none';
+                } else {
+                    // 第2の目（真横）なら、赤線を隠し、黄線を表示
+                    frontLineElement.style.display = 'none';
+                    sideVerticalElement.style.display = 'block';
+                    sideSlantElement.style.display = 'block';
+                }
+            }
+        });
     });
 }
 
-// カメラの起動にはラグがあるため、定期的に画面を監視して線を埋め込む（1秒毎）
-setInterval(injectGuideLines, 1000);
+// 画面の更新（タブ切り替えやカメラ起動）を検知してJSを実行
+// 1000ミリ秒（1秒）ごとに定期実行してカメラの状態を監視
+setInterval(updateGuideLines, 1000);
+
+// 初回実行
+updateGuideLines();
 </script>
-""", height=0)
+""", unsafe_allow_html=True)
 
 st.title("🪓 刃研ぎAI達人診断システム")
 st.caption("幾何学的な『職人の基準線』と『AI達人の言葉』を見比べて、自分の研ぎ方のクセを探究しよう！")
